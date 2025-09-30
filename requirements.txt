@@ -7,5 +7,13 @@ reportlab>=4.0.0
 python-dotenv>=1.0.0
 requests>=2.28.0
 
+# Payment processing
+stripe>=5.0.0
+paypalrestsdk>=1.13.0
+
+# Data handling
+pandas>=1.5.0
+numpy>=1.24.0
+
 # Optional: For better performance
 watchdog>=3.0.0

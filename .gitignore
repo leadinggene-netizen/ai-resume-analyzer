@@ -30,6 +30,7 @@ env/
 .env
 .env.local
 .env.production
+secrets_template_filled.toml
 
 # IDE
 .vscode/
@@ -43,6 +44,15 @@ Thumbs.db
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Payment & sensitive files
+stripe_test_data.json
+paypal_test_data.json
+webhook_logs/
+
+# Local development
+*.log
+debug_*
 
 # Temporary files
 *.tmp
