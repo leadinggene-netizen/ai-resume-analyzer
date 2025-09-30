@@ -1,0 +1,13 @@
+# Streamlit Cloud Configuration
+[general]
+name = "AI Resume Analyzer"
+description = "AI-powered resume analysis and job optimization tool"
+
+[server]
+port = 8501
+address = "0.0.0.0"
+maxUploadSize = 50
+enableCORS = true
+
+[browser]
+gatherUsageStats = false
