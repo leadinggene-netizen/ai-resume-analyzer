@@ -426,10 +426,25 @@ def generate_resume_txt(resume_content):
     return io.BytesIO(clean_content.encode('utf-8'))
 
 def handle_analysis_click(uploaded_file,resume_text, target_position, api_key) :
+    # Check usage limits for non-premium users
+    if not st.session_state.is_premium_user:
+        if st.session_state.usage_count >= 3:
+            st.error("🚫 You've reached the free usage limit (3 analyses)!")
+            st.markdown("### 🚀 Upgrade Options:")
+            st.markdown("- **Premium Monthly ($9.99)**: Unlimited analyses + Advanced features")
+            st.markdown("- **Pay Per Use ($2.99)**: Single analysis with premium features")
+            st.markdown("[**📧 Contact us to upgrade**](mailto:upgrade@your-domain.com)")
+            return None
+    
     content=get_resume_content(uploaded_file,resume_text)
     if not content:
         st.warning("Please submit your resume file or input resume text")
         return
+    
+    # Increment usage counter for non-premium users
+    if not st.session_state.is_premium_user:
+        st.session_state.usage_count += 1
+        
     with st.spinner("working on your file..."):
         analysis_result=analyze_resume_with_ai(content,target_position,api_key)
         st.session_state.analysis_result=analysis_result
@@ -450,13 +465,40 @@ def main():
         st.session_state.original_resume_content=None
     if "evaluation_in_progress" not in st.session_state:
         st.session_state.evaluation_in_progress=False
+    if "usage_count" not in st.session_state:
+        st.session_state.usage_count = 0
+    if "is_premium_user" not in st.session_state:
+        st.session_state.is_premium_user = False
     with st.sidebar:
         st.markdown("AI Resume Analyzer will help you to evaluate your candidateship based on your resume and your target position")
-        api_key=st.text_input("Please enter your API key from OpenAI platform",type="password",placeholder="Please provide your API key",help="You can obtain an API key in platform.openai.com")
+        
+        # Usage tracking display
+        if not st.session_state.is_premium_user:
+            remaining_uses = max(0, 3 - st.session_state.usage_count)
+            if remaining_uses > 0:
+                st.info(f"🆓 Free analyses remaining: {remaining_uses}")
+            else:
+                st.error("🚫 Free limit reached! Upgrade for unlimited access.")
+                if st.button("🚀 Upgrade to Premium - $9.99/month"):
+                    st.markdown("[**👉 Get Premium Access**](mailto:upgrade@your-domain.com?subject=Premium%20Upgrade&body=I%20want%20to%20upgrade%20to%20premium%20access)")
+        else:
+            st.success("✨ Premium User - Unlimited Access")
+        
+        # Premium toggle for testing (remove in production)
+        if st.checkbox("Enable Premium Features (Demo)"):
+            st.session_state.is_premium_user = True
+        
+        st.markdown("---")
+        
+        api_key=st.text_input("Please enter your API key from SiliconFlow platform",type="password",placeholder="Please provide your API key",help="Get your API key from siliconflow.cn or use OpenAI API key")
         if api_key:
             st.success("API key entered!")
         else:
             st.warning("Please provide your API key.")
+            st.markdown("**Don't have an API key?**")
+            st.markdown("- [Get SiliconFlow API Key](https://siliconflow.cn) (Recommended)")
+            st.markdown("- [Get OpenAI API Key](https://platform.openai.com)")
+            st.markdown("- [📧 Contact us for managed service](mailto:support@your-domain.com)")
         st.markdown("---")
         st.markdown("### About Us")
         st.markdown("AI Resume Analyzer is empowered with OpenAI to help you to evaluate your candidateship based on your resume and your target position")
@@ -542,34 +584,59 @@ def main():
         # Job Optimization Section
         st.markdown("---")
         st.markdown("### 🎯 Resume Optimization for Specific Job")
-        st.info("💡 Upload or paste a job posting to get a tailored, optimized version of your resume!")
         
-        # Job posting input
-        col_job1, col_job2 = st.columns([1, 1])
+        # Premium feature check
+        if not st.session_state.is_premium_user:
+            st.warning("⭐ **Premium Feature**: Job optimization requires premium access")
+            col_upgrade1, col_upgrade2 = st.columns([1, 1])
+            with col_upgrade1:
+                if st.button("🚀 Upgrade to Premium ($9.99/month)", use_container_width=True):
+                    st.markdown("[**Get Premium Access**](mailto:upgrade@your-domain.com?subject=Premium%20Upgrade)")
+            with col_upgrade2:
+                if st.button("💳 Pay Per Use ($2.99)", use_container_width=True):
+                    st.markdown("[**One-time Payment**](mailto:support@your-domain.com?subject=Pay%20Per%20Use)")
+        else:
+            st.info("💡 Upload or paste a job posting to get a tailored, optimized version of your resume!")
         
-        with col_job1:
-            st.markdown("#### Upload Job Posting File")
-            job_file = st.file_uploader("Upload Job Posting", type=["txt", "pdf", "docx"], 
-                                      help="Upload the job posting document", key="job_file")
-            if job_file is not None:
-                st.success(f"✅ Job posting uploaded: {job_file.name}")
+        # Job posting input (only show for premium users)
+        if st.session_state.is_premium_user:
+            col_job1, col_job2 = st.columns([1, 1])
+            
+            with col_job1:
+                st.markdown("#### Upload Job Posting File")
+                job_file = st.file_uploader("Upload Job Posting", type=["txt", "pdf", "docx"], 
+                                          help="Upload the job posting document", key="job_file")
+                if job_file is not None:
+                    st.success(f"✅ Job posting uploaded: {job_file.name}")
+            
+            with col_job2:
+                st.markdown("#### Or Paste Job Description")
+                job_description = st.text_area("Paste job description here", height=200, 
+                                              placeholder="Paste the complete job posting including requirements, responsibilities, and qualifications...",
+                                              key="job_desc")
+        else:
+            # Show locked state for non-premium users
+            st.text_input("🔒 Upload Job Posting File (Premium Only)", disabled=True, placeholder="Upgrade to premium to unlock this feature")
+            st.text_area("🔒 Or Paste Job Description (Premium Only)", disabled=True, height=200, 
+                        placeholder="Upgrade to premium to access job optimization features...")
         
-        with col_job2:
-            st.markdown("#### Or Paste Job Description")
-            job_description = st.text_area("Paste job description here", height=200, 
-                                          placeholder="Paste the complete job posting including requirements, responsibilities, and qualifications...",
-                                          key="job_desc")
-        
-        # Analyze job and optimize resume button
-        if st.button("🚀 Optimize Resume for This Job", type="primary", use_container_width=True):
-            # Get job content
-            if job_file:
-                job_content = extract_file_content(job_file)
-            elif job_description:
-                job_content = job_description
-            else:
-                st.error("Please upload a job posting file or paste the job description")
-                job_content = None
+        # Analyze job and optimize resume button (premium only)
+        if st.session_state.is_premium_user:
+            optimize_button = st.button("🚀 Optimize Resume for This Job", type="primary", use_container_width=True)
+        else:
+            st.button("🔒 Optimize Resume for This Job (Premium Only)", disabled=True, use_container_width=True)
+            optimize_button = False
+            
+        if optimize_button:
+            # Get job content (initialize variables for premium users)
+            if st.session_state.is_premium_user:
+                if 'job_file' in locals() and job_file:
+                    job_content = extract_file_content(job_file)
+                elif 'job_description' in locals() and job_description:
+                    job_content = job_description
+                else:
+                    st.error("Please upload a job posting file or paste the job description")
+                    job_content = None
             
             if job_content and st.session_state.original_resume_content:
                 with st.spinner("Analyzing job requirements..."):
